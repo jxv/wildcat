@@ -432,3 +432,33 @@ void print_results(Results &results, Teams &teams) {
         std::cout << '\n';
     }
 }
+
+Heat::Heat()
+: Heat(Tag::Single)
+{}
+    
+Heat::Heat(Tag tag)
+: tag(tag)
+{
+    switch (tag) {
+    case Tag::Single:
+        single.results = new Results;
+        break;
+    case Tag::Combined:
+        combined.varsity_results = new Results;
+        combined.jv_results = new Results;
+        break;
+    }
+}
+
+Heat::~Heat() {
+    switch (tag) {
+    case Tag::Single:
+        delete single.results;
+        break;
+    case Tag::Combined:
+        delete combined.varsity_results;
+        delete combined.jv_results;
+        break;
+    }
+}

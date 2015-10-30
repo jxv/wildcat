@@ -10,6 +10,7 @@
 #include <cmath>
 #include <experimental/optional>
 #include <tuple>
+#include <memory>
 
 using std::experimental::optional;
 
@@ -116,16 +117,20 @@ struct Heat {
         Combined,
     };
 
-    Tag tag;
+    const Tag tag;
     union {
         struct {
-            Results results;
+            Results* results;
         } single;
         struct {
-            Results varsity_results;
-            Results jv_results;
+            Results* varsity_results;
+            Results* jv_results;
         } combined;
     };
+
+    Heat();
+    Heat(Tag);
+    ~Heat();
 };
 
 struct Wildcat {
@@ -135,6 +140,7 @@ struct Wildcat {
     Finishes finishes;
     Rosters rosters;
     Teams teams;
+    Heat heat;
 };
 
 bool import_rosters_v1(const std::string &roster_file, Rosters &rosters, Teams &teams, Runners &runners);
