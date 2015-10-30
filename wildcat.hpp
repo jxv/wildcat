@@ -25,6 +25,28 @@ enum class Gender {
     M,
 };
 
+float to_total_seconds(float minutes, float seconds, float ms);
+
+class Time {
+public:
+    Time();
+    Time(float total_seconds);
+    Time(int minutes, int seconds, int ms = 0);
+    int get_minutes() const;
+    int get_seconds() const;
+    int get_ms() const;
+    float get_total_seconds() const;
+private:
+    int minutes;
+    int seconds;
+    int ms;
+    float total_seconds;
+    friend std::ostream& operator<<(std::ostream &os, const Time &ft);
+};
+
+std::ostream& operator<<(std::ostream &os, const Time &ft);
+Time operator+(const Time &a, const Time &b);
+
 struct Runner {
     std::string name;
     optional<Class> klass;
@@ -52,6 +74,7 @@ struct Place {
 
 struct Squad {
     unsigned int score;
+    Time time;
     std::vector<Place> places;
 };
 
@@ -68,39 +91,42 @@ struct Rosters {
     std::map<TeamId, std::vector<RunnerId>> team_to_runners;
 };
 
-float to_total_seconds(float minutes, float seconds, float ms);
-
-class FinishTime {
-public:
-    FinishTime(float total_seconds);
-    FinishTime(int minutes = 0, int seconds = 0, int ms = 0);
-    int get_minutes() const;
-    int get_seconds() const;
-    int get_ms() const;
-    float get_total_seconds() const;
-private:
-    int minutes;
-    int seconds;
-    int ms;
-    float total_seconds;
-    friend std::ostream& operator<<(std::ostream &os, const FinishTime &ft);
-};
-
-std::ostream& operator<<(std::ostream &os, const FinishTime &ft);
-
 struct Finish {
     RunnerId runner_id;
-    FinishTime finish_time;
+    Time time;
 };
 
 using Finishes = std::vector<Finish>;
 
-bool import_rosters_v1(const std::string &roster_file, Rosters &rosters, Teams &teams, Runners &runners);
-bool import_barcodes_v1(const std::string &barcode_file, std::vector<RunnerId> &barcodes);
-bool import_times_v1(const std::string &times_file, std::vector<float> &times);
-void make_finishes(const std::vector<float> &times, const std::vector<RunnerId> &barcodes, Finishes &finishes);
-void separate_combined_heat(const Rosters &rosters, const Finishes &all, Finishes &varsity, Finishes &jv);
-void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes);
+struct Result {
+    unsigned int place;
+    TeamId team_id;
+    Squad squad;
+};
+
+using Results = std::vector<Result>;
+
+bool operator==(const Result &a, const Result &b);
+bool operator>(const Result &a, const Result &b);
+bool operator<(const Result &a, const Result &b);
+
+struct Heat {
+    enum class Tag {
+        Single,
+        Combined,
+    };
+
+    Tag tag;
+    union {
+        struct {
+            Results results;
+        } single;
+        struct {
+            Results varsity_results;
+            Results jv_results;
+        } combined;
+    };
+};
 
 struct Wildcat {
     Runners runners;
@@ -110,5 +136,13 @@ struct Wildcat {
     Rosters rosters;
     Teams teams;
 };
+
+bool import_rosters_v1(const std::string &roster_file, Rosters &rosters, Teams &teams, Runners &runners);
+bool import_barcodes_v1(const std::string &barcode_file, std::vector<RunnerId> &barcodes);
+bool import_times_v1(const std::string &times_file, std::vector<float> &times);
+void make_finishes(const std::vector<float> &times, const std::vector<RunnerId> &barcodes, Finishes &finishes);
+void separate_combined_heat(const Rosters &rosters, const Finishes &all, Finishes &varsity, Finishes &jv);
+void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes, Results &results);
+void print_results(Results &results, Teams &teams);
 
 #endif

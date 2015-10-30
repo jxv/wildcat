@@ -1,15 +1,17 @@
 #include "mainwindow.hpp"
 
+/*
 int main(int argc, char **argv) {
 
     Glib::RefPtr<Gtk::Application> app = Gtk::Application::create(argc, argv, "org.wildcat");
     MainWindow main_window;
     return app->run(main_window);
 }
+*/
 
-/*
 int main() {
     Wildcat w;
+    Results results;
 
     if (!import_rosters_v1("roster.txt", w.rosters, w.teams, w.runners))
         return EXIT_FAILURE;
@@ -28,21 +30,22 @@ int main() {
    
     for (auto &finish : varsity) {
         std::cout << finish.runner_id << ' ';
-        std::cout << finish.finish_time << '\n';
+        std::cout << finish.time << '\n';
     }
     
     std::cout << "Varsity:\n"; 
-    score_race(w.runners, w.teams, w.rosters, varsity);
+    score_race(w.runners, w.teams, w.rosters, varsity, results);
+    print_results(results, w.teams);
     std::cout << '\n'; 
 
     for (auto &finish : jv) {
         std::cout << finish.runner_id << ' ';
-        std::cout << finish.finish_time << '\n';
+        std::cout << finish.time << '\n';
     }
 
     std::cout << "JV:\n"; 
-    score_race(w.runners, w.teams, w.rosters, jv);
+    score_race(w.runners, w.teams, w.rosters, jv, results);
+    print_results(results, w.teams);
 
     return EXIT_SUCCESS;
 }
-*/

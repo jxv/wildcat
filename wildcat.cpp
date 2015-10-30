@@ -89,7 +89,11 @@ float to_total_seconds(float minutes, float seconds, float ms) {
     return (60 * minutes) + seconds + (ms / 100);
 }
 
-FinishTime::FinishTime(float total_seconds)
+Time::Time()
+: Time(0, 0, 0)
+{}
+
+Time::Time(float total_seconds)
 : total_seconds(total_seconds)
 {
     minutes = static_cast<int>(std::floor(total_seconds / 60));
@@ -97,33 +101,38 @@ FinishTime::FinishTime(float total_seconds)
     ms = static_cast<int>((total_seconds - std::floor(total_seconds)) * 100);
 }
 
-FinishTime::FinishTime(int minutes, int seconds, int ms)
+Time::Time(int minutes, int seconds, int ms)
 : minutes(minutes)
 , seconds(seconds)
 , ms(ms)
 , total_seconds(to_total_seconds(minutes, seconds, ms))
 {}
 
-int FinishTime::get_minutes() const {
+int Time::get_minutes() const {
     return minutes;
 }
 
-int FinishTime::get_seconds() const {
+int Time::get_seconds() const {
     return seconds;
 }
 
-int FinishTime::get_ms() const {
+int Time::get_ms() const {
     return ms;
 }
 
-float FinishTime::get_total_seconds() const {
+float Time::get_total_seconds() const {
     return total_seconds;
 }
 
-std::ostream& operator<<(std::ostream &os, const FinishTime &ft) {
-    if (ft.minutes > 0) {
-        os << ft.minutes << ':';
+Time operator+(const Time &a, const Time &b) {
+    return Time(a.get_total_seconds() + b.get_total_seconds());
+}
+
+std::ostream& operator<<(std::ostream &os, const Time &ft) {
+    if (ft.minutes < 10) {
+        os << '0';
     }
+    os << ft.minutes << ':';
 
     if (ft.seconds < 10) {
         os << '0';
@@ -294,7 +303,7 @@ void make_finishes(const std::vector<float> &times, const std::vector<RunnerId> 
     finishes.clear();
 
     for (auto i = 0; i < times.size() && i < barcodes.size(); i++) {
-        finishes.push_back({ barcodes[i], FinishTime(times[i]) });
+        finishes.push_back({ barcodes[i], Time(times[i]) });
     }
 }
 
@@ -319,12 +328,26 @@ void separate_combined_heat(const Rosters &rosters, const Finishes &all, Finishe
     }
 }
 
-void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes) {
+bool operator==(const Result &a, const Result &b) {
+    return a.squad == b.squad;
+}
+
+bool operator>(const Result &a, const Result &b) {
+    return a.squad > b.squad;
+}
+
+bool operator<(const Result &a, const Result &b) {
+    return a.squad < b.squad;
+}
+
+void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes, Results &results) {
+
+    results.clear();
 
     Squads squads;
 
     for (auto &team : teams) {
-        squads.insert(std::pair<TeamId, Squad>(team.first, {0, {}}));
+        squads.insert(std::pair<TeamId, Squad>(team.first, {0, Time(0), {}}));
     }
 
     // Fill up squads
@@ -342,34 +365,70 @@ void score_race(const Runners &runners, const Teams &teams, const Rosters &roste
     }
 
     for (auto &squad : squads) {
-        if (squad.second.places.size() < 5) continue;
-        auto score = 0;
-        for (auto i = 0; i < 5; i++) {
-            score += squad.second.places[i].place_number;
+        squad.second.score = 0;
+        if (squad.second.places.size() < 5) {
+            continue;
         }
-        squad.second.score = score;
+        for (auto i = 0; i < 5; i++) {
+            const auto &place_number = squad.second.places[i].place_number;
+            squad.second.score += place_number;
+            squad.second.time = squad.second.time + finishes[place_number].time;
+        }
     }
 
-    std::priority_queue<std::tuple<Squad, TeamId>> queue;
+    std::priority_queue<Result> queue;
     for (auto &squad : squads) {
-        queue.push(std::tuple<Squad, TeamId>(squad.second, squad.first));
+        queue.push({
+            .place = 0,
+            .team_id = squad.first,
+            .squad = squad.second,
+        });
     }
 
-    std::vector<std::tuple<Squad, TeamId>> results;
+    unsigned int place = 1;
     while (queue.size()) {
-        results.push_back(queue.top());
+        auto result = queue.top();
+        result.place = place;
+        if (result.squad.score != 0) {
+            place++;
+        }
+        results.push_back(result);
         queue.pop();
     }
+}
 
-    int i = 1;
+void print_results(Results &results, Teams &teams) {
     for (auto &result : results) {
-        std::cout << i << ' ';
-        std::cout << teams.at(std::get<1>(result)).initials;
+        std::cout << result.place;
+        std::cout << ' ';
+        std::cout << teams.at(result.team_id).initials;
         std::cout << " - ";
-        std::cout << std::get<0>(result).score;
-        std::cout << '\n';
-        if (std::get<0>(result).score != 0) {
-            i++;
+        std::cout << result.squad.score;
+        std::cout << " - ";
+        std::cout << result.squad.time;
+        std::cout << " -";
+
+        for (auto i = 0; i < 5 && i < result.squad.places.size(); i++) {
+            std::cout << ' ' << result.squad.places[i].place_number;
         }
+   
+        if (result.squad.places.size() >= 6) { 
+            std::cout << " (";
+        }
+
+        if (5 < result.squad.places.size()) {
+            std::cout << result.squad.places[5].place_number;
+        }
+
+        if (6 < result.squad.places.size()) {
+            std::cout << ' ';
+            std::cout << result.squad.places[6].place_number;
+        }
+
+        if (result.squad.places.size() >= 6) { 
+            std::cout << ")";
+        }
+
+        std::cout << '\n';
     }
 }
