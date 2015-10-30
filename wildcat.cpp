@@ -473,6 +473,7 @@ void Heat::set_single() {
         single.results = new Results;
         break;
     } 
+    tag = Tag::Single;
 }
 
 void Heat::set_combined() {
@@ -485,4 +486,5 @@ void Heat::set_combined() {
     case Tag::Combined:
         break;
     }
+    tag = Tag::Combined;
 }
