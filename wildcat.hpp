@@ -1,6 +1,7 @@
 #ifndef WILDCAT_HPP
 #define WILDCAT_HPP
 
+#include <sstream>
 #include <iostream>
 #include <string>
 #include <map>
@@ -10,6 +11,7 @@
 #include <cmath>
 #include <experimental/optional>
 #include <tuple>
+#include <set>
 #include <memory>
 
 using std::experimental::optional;
@@ -20,6 +22,8 @@ enum class Class {
     Jr,
     Sr,
 };
+
+std::ostream &operator<<(std::ostream &os, const Class klass);
 
 enum class Gender {
     F,
@@ -95,6 +99,7 @@ struct Rosters {
 struct Finish {
     RunnerId runner_id;
     Time time;
+    unsigned int score;
 };
 
 using Finishes = std::vector<Finish>;
@@ -121,10 +126,13 @@ struct Heat {
     union {
         struct {
             Results* results;
+            Finishes* finishes;
         } single;
         struct {
             Results* varsity_results;
+            Finishes* varsity_finishes;
             Results* jv_results;
+            Finishes* jv_finishes;
         } combined;
     };
 
@@ -146,12 +154,17 @@ struct Wildcat {
     Heat heat;
 };
 
+std::ostream &operator<<(std::ostream &os, const Wildcat &w);
+
 bool import_rosters_v1(const std::string &roster_file, Rosters &rosters, Teams &teams, Runners &runners);
 bool import_barcodes_v1(const std::string &barcode_file, std::vector<RunnerId> &barcodes);
 bool import_times_v1(const std::string &times_file, std::vector<float> &times);
 void make_finishes(const std::vector<float> &times, const std::vector<RunnerId> &barcodes, Finishes &finishes);
 void separate_combined_heat(const Rosters &rosters, const Finishes &all, Finishes &varsity, Finishes &jv);
-void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes, Results &results);
+void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, Finishes &finishes, Results &results);
 void print_results(Results &results, Teams &teams);
+
+void output_results(std::ostream &os,
+    const Rosters &rosters, const Teams &teams, const Runners &runners, const Results &results);
 
 #endif

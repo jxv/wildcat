@@ -9,6 +9,24 @@
 #include <tuple>
 #include "wildcat.hpp"
 
+std::ostream &operator<<(std::ostream &os, const Class klass) {
+    switch (klass) {
+    case Class::Fr:
+        os << "Fr.";
+        break;
+    case Class::So:
+        os << "So.";
+        break;
+    case Class::Jr:
+        os << "Jr.";
+        break;
+    case Class::Sr:
+        os << "Sr.";
+        break;
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream &os, const Runner &r) {
     os << "{";
     os << "\"name\": \"" << r.name << "\"";
@@ -125,7 +143,10 @@ float Time::get_total_seconds() const {
 }
 
 Time operator+(const Time &a, const Time &b) {
-    return Time(a.get_total_seconds() + b.get_total_seconds());
+    const auto ms = a.get_ms() + b.get_ms();
+    const auto seconds = a.get_seconds() + b.get_seconds() + (ms / 100);
+    const auto minutes = a.get_minutes() + b.get_minutes() + (seconds / 60);
+    return Time(minutes, seconds % 60, ms % 100);
 }
 
 std::ostream& operator<<(std::ostream &os, const Time &ft) {
@@ -303,7 +324,7 @@ void make_finishes(const std::vector<float> &times, const std::vector<RunnerId> 
     finishes.clear();
 
     for (auto i = 0; i < times.size() && i < barcodes.size(); i++) {
-        finishes.push_back({ barcodes[i], Time(times[i]) });
+        finishes.push_back({ barcodes[i], Time(times[i]), 0 });
     }
 }
 
@@ -340,7 +361,7 @@ bool operator<(const Result &a, const Result &b) {
     return a.squad < b.squad;
 }
 
-void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, const Finishes &finishes, Results &results) {
+void score_race(const Runners &runners, const Teams &teams, const Rosters &rosters, Finishes &finishes, Results &results) {
 
     results.clear();
 
@@ -364,16 +385,45 @@ void score_race(const Runners &runners, const Teams &teams, const Rosters &roste
         }
     }
 
+    // Sum times
     for (auto &squad : squads) {
-        squad.second.score = 0;
         if (squad.second.places.size() < 5) {
             continue;
         }
         for (auto i = 0; i < 5; i++) {
             const auto &place_number = squad.second.places[i].place_number;
-            squad.second.score += place_number;
             squad.second.time = squad.second.time + finishes[place_number].time;
         }
+    }
+   
+    // Calc score 
+    std::set<RunnerId> scorers;
+    for (auto &squad : squads) {
+        if (squad.second.places.size() < 5) {
+            continue;
+        }
+        for (auto i = 0; i < 7 && i < squad.second.places.size(); i++) {
+            scorers.insert(squad.second.places[i].runner_id);
+        }
+    }
+    unsigned int score_num = 1;
+    for (auto &finish : finishes) {
+        if (!scorers.count(finish.runner_id)) {
+            continue;
+        }
+        finish.score = score_num;
+
+        // add score to squad
+        auto &squad = squads.at(rosters.runner_to_team.at(finish.runner_id));
+        for (auto i = 0; i < 5; i++) {
+            auto &place = squad.places.at(i);
+            if (place.runner_id == finish.runner_id) {
+                squad.score += score_num;
+                break;
+            }
+        }
+
+        score_num++;
     }
 
     std::priority_queue<Result> queue;
@@ -443,10 +493,13 @@ Heat::Heat(Tag tag)
     switch (tag) {
     case Tag::Single:
         single.results = new Results;
+        single.finishes = new Finishes;
         break;
     case Tag::Combined:
         combined.varsity_results = new Results;
+        combined.varsity_finishes = new Finishes;
         combined.jv_results = new Results;
+        combined.jv_finishes = new Finishes;
         break;
     }
 }
@@ -455,10 +508,13 @@ Heat::~Heat() {
     switch (tag) {
     case Tag::Single:
         delete single.results;
+        delete single.finishes;
         break;
     case Tag::Combined:
         delete combined.varsity_results;
+        delete combined.varsity_finishes;
         delete combined.jv_results;
+        delete combined.jv_finishes;
         break;
     }
 }
@@ -469,8 +525,11 @@ void Heat::set_single() {
         break;
     case Tag::Combined:
         delete combined.varsity_results;
+        delete combined.varsity_finishes;
         delete combined.jv_results;
+        delete combined.jv_finishes;
         single.results = new Results;
+        single.finishes = new Finishes;
         break;
     } 
     tag = Tag::Single;
@@ -480,11 +539,132 @@ void Heat::set_combined() {
     switch (tag) {
     case Tag::Single:
         delete single.results;
+        delete single.finishes;
         combined.varsity_results = new Results;
+        combined.varsity_finishes = new Finishes;
         combined.jv_results = new Results;
+        combined.jv_finishes = new Finishes;
         break;
     case Tag::Combined:
         break;
     }
     tag = Tag::Combined;
+}
+
+void output_results(std::ostream &os,
+        const Rosters &rosters, const Teams &teams, const Runners &runners, const Finishes &finishes, const Results &results) {
+    os << '\n';
+    os << "RACE #_______________________ DIV #___________________________\n";
+    os << '\n';
+    os << "INDIVIDUALS\n";
+    os << "==================================================================================\n";
+    os << '\n';
+    os << "Place  Team             Name                              Grade  Time        Score\n"; 
+    os << "----------------------------------------------------------------------------------\n";
+
+    auto place = 1;
+    for (auto &finish : finishes) {
+        std::stringstream ss;
+        auto extend = [&] (unsigned int limit) {
+            for (auto i = ss.str().length(); i < limit; i++) {
+                ss << ' ';
+            }
+        };
+        //
+        ss << place;
+        extend(7);
+        ss << teams.at(rosters.runner_to_team.at(finish.runner_id)).initials;
+        extend(24);
+        ss << runners.at(finish.runner_id).name;
+        extend(58);
+        auto klass = runners.at(finish.runner_id).klass;
+        if (klass) {
+            ss << *klass;
+        }
+        extend(65);
+        ss << finish.time;
+        extend(77);
+        if (finish.score) {
+            ss << finish.score;
+        }
+        //
+        place++;
+        os << ss.str();
+        os << '\n';
+    }
+ 
+    os << "==================================================================================\n";
+    os << '\n';
+    os << '\n';
+    os << "TEAM SCORES\n";
+    os << "==================================================================================\n";
+    os << '\n';
+
+    for (auto &result : results) {
+        std::stringstream ss;
+        //
+        ss << '#';
+        ss << result.place;
+        ss << ' ';
+        ss << teams.at(result.team_id).initials;
+        ss << "\n   ";
+
+        for (auto i = 0; i < 5 && i < result.squad.places.size(); i++) {
+            ss << ' ' << result.squad.places[i].place_number;
+        }
+   
+        if (result.squad.places.size() >= 6) { 
+            ss << " (";
+        }
+
+        if (5 < result.squad.places.size()) {
+            ss << result.squad.places[5].place_number;
+        }
+
+        if (6 < result.squad.places.size()) {
+            ss << ' ';
+            ss << result.squad.places[6].place_number;
+        }
+
+        if (result.squad.places.size() >= 6) { 
+            ss << ")";
+        }
+
+        if (result.squad.score) {
+            ss << " = ";
+            ss << result.squad.score;
+        }
+
+        if (result.squad.score) {
+            ss << "\n    ";
+            ss << result.squad.time;
+        }
+
+        //
+        ss << '\n';
+        ss << '\n';
+        os << ss.str();
+    }
+
+    os << '\n';
+    os << "==================================================================================\n";
+    os << '\n';
+}
+
+std::ostream &operator<<(std::ostream &os, const Wildcat &w) {
+
+    switch (w.heat.tag) {
+    case Heat::Tag::Single:
+        output_results(os, w.rosters, w.teams, w.runners, *w.heat.single.finishes, *w.heat.single.results);
+        break;
+    case Heat::Tag::Combined:
+        output_results(os, w.rosters, w.teams, w.runners, *w.heat.combined.varsity_finishes, *w.heat.combined.varsity_results);
+        os << '\n';
+        output_results(os, w.rosters, w.teams, w.runners, *w.heat.combined.jv_finishes, *w.heat.combined.jv_results);
+        break;
+    }
+    os << '\n';
+    os << "			Wildcat Timing & Scoring System © 2010-2015\n";
+    os << '\n';
+    return os;
 }
