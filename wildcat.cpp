@@ -462,3 +462,27 @@ Heat::~Heat() {
         break;
     }
 }
+
+void Heat::set_single() {
+    switch (tag) {
+    case Tag::Single:
+        break;
+    case Tag::Combined:
+        delete combined.varsity_results;
+        delete combined.jv_results;
+        single.results = new Results;
+        break;
+    } 
+}
+
+void Heat::set_combined() {
+    switch (tag) {
+    case Tag::Single:
+        delete single.results;
+        combined.varsity_results = new Results;
+        combined.jv_results = new Results;
+        break;
+    case Tag::Combined:
+        break;
+    }
+}

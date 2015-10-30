@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
 
 int main() {
     Wildcat w;
-    Results results;
+    w.heat.set_combined();
 
     if (!import_rosters_v1("roster.txt", w.rosters, w.teams, w.runners))
         return EXIT_FAILURE;
@@ -34,8 +34,8 @@ int main() {
     }
     
     std::cout << "Varsity:\n"; 
-    score_race(w.runners, w.teams, w.rosters, varsity, results);
-    print_results(results, w.teams);
+    score_race(w.runners, w.teams, w.rosters, varsity, *w.heat.combined.varsity_results);
+    print_results(*w.heat.combined.varsity_results, w.teams);
     std::cout << '\n'; 
 
     for (auto &finish : jv) {
@@ -44,8 +44,8 @@ int main() {
     }
 
     std::cout << "JV:\n"; 
-    score_race(w.runners, w.teams, w.rosters, jv, results);
-    print_results(results, w.teams);
+    score_race(w.runners, w.teams, w.rosters, jv, *w.heat.combined.jv_results);
+    print_results(*w.heat.combined.jv_results, w.teams);
 
     return EXIT_SUCCESS;
 }

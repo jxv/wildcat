@@ -117,7 +117,7 @@ struct Heat {
         Combined,
     };
 
-    const Tag tag;
+    Tag tag;
     union {
         struct {
             Results* results;
@@ -131,6 +131,9 @@ struct Heat {
     Heat();
     Heat(Tag);
     ~Heat();
+
+    void set_single();
+    void set_combined();
 };
 
 struct Wildcat {
