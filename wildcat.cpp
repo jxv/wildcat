@@ -392,7 +392,7 @@ void score_race(const Runners &runners, const Teams &teams, const Rosters &roste
         }
         for (auto i = 0; i < 5; i++) {
             const auto &place_number = squad.second.places[i].place_number;
-            squad.second.time = squad.second.time + finishes[place_number].time;
+            squad.second.time = squad.second.time + finishes[place_number - 1].time;
         }
     }
    
