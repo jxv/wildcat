@@ -1,6 +1,6 @@
 #include "mainwindow.hpp"
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(SDL_Joystick *js, Mix_Chunk *beep)
 : load_config_button("Load Config")
 , load_roster_button("Load Roster")
 , load_barcodes_button("Load Barcodes")
@@ -14,6 +14,8 @@ MainWindow::MainWindow()
 , results_list(RLC_COUNT)
 , stop_race_dialog(*this, "Stop the race timer?", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL)
 , quit_dialog(*this, "Are you sure you want to quit?", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO)
+, js(js)
+, beep(beep)
 {
     set_border_width(10);
     add(main_divider);
@@ -141,6 +143,9 @@ MainWindow::MainWindow()
 
     show_all_children();
     results_frame.hide();
+
+
+    // SDL2
 }
 
 MainWindow::~MainWindow() {}
@@ -150,7 +155,11 @@ void MainWindow::on_load_config_button_clicked() {
 }
 
 void MainWindow::on_load_roster_button_clicked() {
-    std::cout << "load roster\n";
+    if (!import_rosters_v1("roster.txt", w.rosters, w.teams, w.runners)) {
+        std::cout << "can't load roster\n";
+    } else {
+        std::cout << "load roster\n";
+    }
 }
 
 void MainWindow::on_start_button_clicked() {
@@ -176,7 +185,11 @@ void MainWindow::on_stop_button_clicked() {
 }
 
 void MainWindow::on_load_barcodes_button_clicked() {
-    std::cout << "load barcodes\n";
+    if (!import_barcodes_v1("barcodes.txt", w.barcodes)) {
+        std::cout << "can't load barcodes\n";
+    } else {
+        std::cout << "load barcodes\n";
+    }
 }
 
 void MainWindow::on_load_results_button_clicked() {
@@ -188,5 +201,5 @@ void MainWindow::on_export_results_button_clicked() {
 }
 
 void MainWindow::on_pretty_print_results_button_clicked() {
-    std::cout << "pretty print results\n";
+    std::cout << w;
 }

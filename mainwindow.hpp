@@ -8,6 +8,7 @@
 #include <gtkmm/window.h>
 #include <gdkmm/rgba.h>
 #include <SDL.h>
+#include <SDL_mixer.h>
 
 enum RaceListColumn : guint {
     RLC_PLACE = 0,
@@ -21,7 +22,7 @@ enum RaceListColumn : guint {
 
 class MainWindow : public Gtk::Window {
 public:
-    MainWindow();
+    MainWindow(SDL_Joystick *js, Mix_Chunk *beep);
     virtual ~MainWindow();
 
 protected:
@@ -70,6 +71,10 @@ private:
     Gtk::Frame results_frame;
 
     Gtk::MessageDialog quit_dialog;
+
+    SDL_Joystick *js;
+    Mix_Chunk *beep;
+    Wildcat w;
 };
 
 #endif
