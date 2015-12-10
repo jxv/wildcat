@@ -1,5 +1,6 @@
 #include "mainwindow.hpp"
 
+/*
 int main(int argc, char **argv) {
     const auto flags = 
         SDL_INIT_JOYSTICK |
@@ -34,29 +35,7 @@ int main(int argc, char **argv) {
     SDL_Quit();
     return val;
 }
-
-/*
-void wildcat_score(Wildcat &w) {
-    switch (w.heat.tag) {
-    case Heat::Tag::Single:
-        *w.heat.single.finishes = w.finishes;
-        break;
-    case Heat::Tag::Combined:
-        separate_combined_heat(w.rosters, w.finishes,
-            *w.heat.combined.varsity_finishes, *w.heat.combined.jv_finishes);
-        break;
-    }
-
-    switch (w.heat.tag) {
-    case Heat::Tag::Single:
-        score_race(w.runners, w.teams, w.rosters, *w.heat.single.finishes, *w.heat.single.results);
-        break;
-    case Heat::Tag::Combined:
-        score_race(w.runners, w.teams, w.rosters, *w.heat.combined.varsity_finishes, *w.heat.combined.varsity_results);
-        score_race(w.runners, w.teams, w.rosters, *w.heat.combined.jv_finishes, *w.heat.combined.jv_results);
-        break;
-    }
-}
+*/
 
 int main() {
     Wildcat w;
@@ -72,7 +51,7 @@ int main() {
         return EXIT_FAILURE;
 
     make_finishes(w.times, w.barcodes, w.finishes);
-    wildcat_score(w);
+    score(w);
 
 
     switch (w.heat.tag) {
@@ -118,11 +97,18 @@ int main() {
 
     return EXIT_SUCCESS;
 }
-*/
 
-/*
+
+void print_results(Wildcat &w) {
     switch (w.heat.tag) {
     case Heat::Tag::Single: {
+        for (auto &finish : *w.heat.single.finishes) {
+            std::cout << finish.runner_id << ' ';
+            std::cout << finish.time << '\n';
+        }
+        std::cout << "Varsity:\n"; 
+        print_results(*w.heat.single.results, w.teams);
+        std::cout << '\n'; 
         break;
     }
     case Heat::Tag::Combined: {
@@ -130,20 +116,16 @@ int main() {
             std::cout << finish.runner_id << ' ';
             std::cout << finish.time << '\n';
         }
-        
         std::cout << "Varsity:\n"; 
-       print_results(*w.heat.combined.varsity_results, w.teams);
+        print_results(*w.heat.combined.varsity_results, w.teams);
         std::cout << '\n'; 
-
         for (auto &finish : *w.heat.combined.jv_finishes) {
             std::cout << finish.runner_id << ' ';
             std::cout << finish.time << '\n';
         }
-
         std::cout << "JV:\n"; 
         print_results(*w.heat.combined.jv_results, w.teams);
-
         break;
     }
     }
-*/
+}
